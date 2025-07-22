@@ -1,148 +1,122 @@
-<script type="text/javascript">
-        var gk_isXlsx = false;
-        var gk_xlsxFileLookup = {};
-        var gk_fileData = {};
-        function filledCell(cell) {
-          return cell !== '' && cell != null;
-        }
-        function loadFileData(filename) {
-        if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
-            try {
-                var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
-                var firstSheetName = workbook.SheetNames[0];
-                var worksheet = workbook.Sheets[firstSheetName];
-
-                // Convert sheet to JSON to filter blank rows
-                var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
-                // Filter out blank rows (rows where all cells are empty, null, or undefined)
-                var filteredData = jsonData.filter(row => row.some(filledCell));
-
-                // Heuristic to find the header row by ignoring rows with fewer filled cells than the next row
-                var headerRowIndex = filteredData.findIndex((row, index) =>
-                  row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
-                );
-                // Fallback
-                if (headerRowIndex === -1 || headerRowIndex > 25) {
-                  headerRowIndex = 0;
-                }
-
-                // Convert filtered JSON back to CSV
-                var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex)); // Create a new sheet from filtered array of arrays
-                csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
-                return csv;
-            } catch (e) {
-                console.error(e);
-                return "";
-            }
-        }
-        return gk_fileData[filename] || "";
-        }
-        </script><!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Magic: The Gathering Card Viewer</title>
-    <style>
-        body {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-            margin: 0;
-            padding: 2rem;
-            background: linear-gradient(135deg, #1a1a1a, #2c2c2c);
-            color: #ffffff;
-        }
-        .search-bar {
-            display: flex;
-            gap: 1rem;
-            align-items: center;
-            max-width: 1200px;
-            margin: 0 auto 2rem;
-            padding: 1rem;
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 12px;
-            backdrop-filter: blur(10px);
-        }
-        .search-bar input {
-            flex: 1;
-            padding: 0.75rem;
-            font-size: 1rem;
-            border: none;
-            border-radius: 8px;
-            background: rgba(255, 255, 255, 0.15);
-            color: #000;
-        }
-        .search-bar select {
-            padding: 0.75rem;
-            font-size: 1rem;
-            border: none;
-            border-radius: 8px;
-            background: rgba(255, 255, 255, 0.15);
-            color: #fff;
-        }
-        .search-bar button {
-            padding: 0.75rem 1.5rem;
-            font-size: 1rem;
-            border: none;
-            border-radius: 8px;
-            background: #007bff;
-            color: #fff;
-            cursor: pointer;
-            transition: background 0.3s;
-        }
-        .search-bar button:hover {
-            background: #0056b3;
-        }
-        .card-container {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-            gap: 1.5rem;
-            max-width: 1200px;
-            margin: 0 auto;
-        }
-        .card {
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 12px;
-            overflow: hidden;
-            transition: transform 0.3s, box-shadow 0.3s;
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
-        }
-        .card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
-        }
-        .card img {
-            width: 100%;
-            height: auto;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-        }
-        .card-content {
-            padding: 1.5rem;
-        }
-        .card h2 {
-            margin: 0 0 1rem;
-            font-size: 1.5rem;
-            color: #fff;
-        }
-        .card p {
-            margin: 0.5rem 0;
-            font-size: 0.95rem;
-            color: #ddd;
-        }
-        .legalities {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 0.5rem;
-        }
-        .legalities span {
-            padding: 0.25rem 0.5rem;
-            border-radius: 4px;
-            font-size: 0.85rem;
-        }
-        .legal { background: rgba(0, 255, 0, 0.2); color: #0f0; }
-        .not-legal { background: rgba(255, 0, 0, 0.2); color: #f00; }
-    </style>
-</head>
-<body>
+<style>
+    body {
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+        margin: 0;
+        padding: 2rem;
+        background: linear-gradient(135deg, #1a1a1a, #2c2c2c);
+        code: #ffffff;
+    }
+    .search-bar {
+        display: flex;
+        gap: 1rem;
+        align-items: center;
+        max-width: 1200px;
+        margin: 0 auto 2rem;
+        padding: 1rem;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 12px;
+        backdrop-filter: blur(10px);
+    }
+    .search-bar input {
+        flex: 1;
+        padding: 0.75rem;
+        font-size: 1rem;
+        border: none;
+        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.15);
+        color: #fff;
+    }
+    .search-bar select {
+        padding: 0.75rem;
+        font-size: 1rem;
+        border: none;
+        border-radius: 8px;
+        background: rgba(0, 0, 0, 0.7);
+        color: #fff;
+        -webkit-appearance: none;
+        -moz-appearance: none;
+        appearance: none;
+    }
+    .search-bar select option {
+        background: #333;
+        color: #fff;
+    }
+    .search-bar button {
+        padding: 0.75rem 1.5rem;
+        font-size: 1rem;
+        border: none;
+        border-radius: 8px;
+        background: #007bff;
+        color: #fff;
+        cursor: pointer;
+        transition: background 0.3s;
+    }
+    .search-bar button:hover {
+        background: #0056b3;
+    }
+    .card-container {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+        gap: 1.5rem;
+        max-width: 1200px;
+        margin: 0 auto;
+    }
+    .card {
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 12px;
+        overflow: hidden;
+        transition: transform 0.3s, box-shadow 0.3s;
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+    }
+    .card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+    }
+    .card img {
+        width: 100%;
+        height: auto;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    .card-content {
+        padding: 1.5rem;
+    }
+    .card h2 {
+        margin: 0 0 1rem;
+        font-size: 1.5rem;
+        color: #fff;
+    }
+    .card p {
+        margin: 0.5rem 0;
+        font-size: 0.95rem;
+        color: #ddd;
+    }
+    .legalities {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+    .legalities span {
+        padding: 0.25rem 0.5rem;
+        border-radius: 4px;
+        font-size: 0.85rem;
+        background: rgba(0, 0, 0, 0.7);
+        color: #fff;
+    }
+    .legal {
+        background: rgba(0, 255, 0, 0.5) !important;
+        color: #e0ffe0 !important;
+    }
+    .not-legal {
+        background: rgba(255, 0, 0, 0.5) !important;
+        color: #ffe0e0 !important;
+    }
+</style><body>
     <div class="search-bar">
         <input type="text" id="searchInput" placeholder="Search cards (e.g., Black Lotus)" value="" onkeypress="if(event.key === 'Enter') searchCards()">
         <select id="legalityFilter">
@@ -173,9 +147,40 @@
     </div>
     <div id="cardContainer" class="card-container"></div>
 
-    <script>
+    <script type="text/javascript">
+        var gk_isXlsx = false;
+        var gk_xlsxFileLookup = {};
+        var gk_fileData = {};
+        function filledCell(cell) {
+            return cell !== '' && cell != null;
+        }
+        function loadFileData(filename) {
+            if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
+                try {
+                    var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
+                    var firstSheetName = workbook.SheetNames[0];
+                    var worksheet = workbook.Sheets[firstSheetName];
+                    var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
+                    var filteredData = jsonData.filter(row => row.some(filledCell));
+                    var headerRowIndex = filteredData.findIndex((row, index) =>
+                        row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
+                    );
+                    if (headerRowIndex === -1 || headerRowIndex > 25) {
+                        headerRowIndex = 0;
+                    }
+                    var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex));
+                    csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
+                    return csv;
+                } catch (e) {
+                    console.error(e);
+                    return "";
+                }
+            }
+            return gk_fileData[filename] || "";
+        }
+
         async function fetchCards(query, legality, isInitial = false) {
-            let url = query 
+            let url = query
                 ? `https://api.scryfall.com/cards/search?order=usd&q=${encodeURIComponent(query)}`
                 : `https://api.scryfall.com/cards/search?order=usd&q=-t:basic&dir=desc`;
             if (legality) {
@@ -203,44 +208,43 @@
             }
         }
 
-        function displayCards(cards) {
-            const container = document.getElementById('cardContainer');
-            container.innerHTML = '';
-            cards.forEach(card => {
-                const cardDiv = document.createElement('div');
-                cardDiv.className = 'card';
-                const legalities = [
-                    'standard', 'future', 'historic', 'timeless', 'gladiator', 'pioneer', 'modern',
-                    'legacy', 'pauper', 'vintage', 'penny', 'commander', 'oathbreaker', 'standardbrawl',
-                    'brawl', 'alchemy', 'paupercommander', 'duel', 'oldschool', 'premodern', 'predh'
-                ].map(format => {
-                    const status = card.legalities[format] || 'not_legal';
-                    return `<span class="${status === 'legal' ? 'legal' : 'not-legal'}">${format}: ${status === 'legal' ? '✓' : '✗'}</span>`;
-                }).join('');
-                cardDiv.innerHTML = `
-                    ${card.image_uris ? `<img src="${card.image_uris.normal}" alt="${card.name}">` : ''}
-                    <div class="card-content">
-                        <h2>${card.name}</h2>
-                        <p><strong>Mana Cost:</strong> ${card.mana_cost || 'N/A'}</p>
-                        <p><strong>Type:</strong> ${card.type_line}</p>
-                        <p><strong>CMC:</strong> ${card.cmc}</p>
-                        <p><strong>Power/Toughness:</strong> ${card.power ? `${card.power}/${card.toughness}` : 'N/A'}</p>
-                        <p><strong>Oracle Text:</strong> ${card.oracle_text || 'N/A'}</p>
-                        <p><strong>Flavor Text:</strong> ${card.flavor_text || 'N/A'}</p>
-                        <p><strong>Rarity:</strong> ${card.rarity}</p>
-                        <p><strong>Set:</strong> ${card.set_name} (${card.set})</p>
-                        <p><strong>Collector Number:</strong> ${card.collector_number}</p>
-                        <p><strong>Artist:</strong> ${card.artist || 'N/A'}</p>
-                        <p><strong>Legalities:</strong> <div class="legalities">${legalities}</div></p>
-                        <p><strong>Prices:</strong> USD: $${card.prices.usd || 'N/A'}, Foil: $${card.prices.usd_foil || 'N/A'}</p>
-                    </div>
-                `;
-                container.appendChild(cardDiv);
-            });
-        }
-
+function displayCards(cards) {
+    const container = document.getElementById('cardContainer');
+    container.innerHTML = '';
+    cards.forEach(card => {
+        const cardDiv = document.createElement('div');
+        cardDiv.className = 'card';
+        const legalities = [
+            'standard', 'future', 'historic', 'timeless', 'gladiator', 'pioneer', 'modern',
+            'legacy', 'pauper', 'vintage', 'penny', 'commander', 'oathbreaker', 'standardbrawl',
+            'brawl', 'alchemy', 'paupercommander', 'duel', 'oldschool', 'premodern', 'predh'
+        ].map(format => {
+            const status = card.legalities[format] || 'not_legal';
+            return `<span class="${status === 'legal' ? 'legal' : 'not-legal'}">${format}: ${status === 'legal' ? '✓' : '✗'}</span>`;
+        }).join('');
+        cardDiv.innerHTML = `
+            ${card.image_uris ? `<img src="${card.image_uris.normal}" alt="${card.name}">` : ''}
+            <div class="card-content">
+                <h2>${card.name}</h2>
+                <p><strong>Mana Cost:</strong> ${card.mana_cost || 'N/A'}</p>
+                <p><strong>Type:</strong> ${card.type_line}</p>
+                <p><strong>CMC:</strong> ${card.cmc}</p>
+                <p><strong>Power/Toughness:</strong> ${card.power ? `${card.power}/${card.toughness}` : 'N/A'}</p>
+                <p><strong>Oracle Text:</strong> ${card.oracle_text || 'N/A'}</p>
+                <p><strong>Flavor Text:</strong> ${card.flavor_text || 'N/A'}</p>
+                <p><strong>Rarity:</strong> ${card.rarity}</p>
+                <p><strong>Set:</strong> ${card.set_name} (${card.set})</p>
+                <p><strong>Collector Number:</strong> ${card.collector_number}</p>
+                <p><strong>Artist:</strong> ${card.artist || 'N/A'}</p>
+                <p><strong>Legalities:</strong> <div class="legalities">${legalities}</div></p>
+                <p><strong>Prices:</strong> USD: $${card.prices.usd || 'N/A'}, Foil: $${card.prices.usd_foil || 'N/A'}</p>
+            </div>
+        `;
+        container.appendChild(cardDiv);
+    });
+}
         async function searchCards() {
-            const query = document.getElementById('searchInput').value;
+            const query = document.getElementById('searchInput').value || 'mana';
             const legality = document.getElementById('legalityFilter').value;
             const cards = await fetchCards(query, legality);
             displayCards(cards);
